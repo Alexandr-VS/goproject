@@ -11,8 +11,8 @@ import (
 func main() {
 	if handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever); err != nil {
 		panic(err)
-	} else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
-		panic(err)
+		// } else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
+		// 	panic(err)
 	} else {
 
 		// Источник пакетов
@@ -20,6 +20,7 @@ func main() {
 
 		for packet := range packetSource.Packets() {
 			handlePacket(packet)
+			fmt.Println()
 		}
 	}
 }
@@ -27,17 +28,40 @@ func main() {
 // Обработка пакетов
 
 func handlePacket(packet gopacket.Packet) {
-	// Декодирование пакета
-	//packet := gopacket.NewPacket(myPacketData, layers.LayerTypeEthernet, gopacket.Default)
+
+	//Получение уровня ip (источник, получатель)
+	if ipLayer := packet.Layer(layers.LayerTypeIPv4); ipLayer != nil {
+
+		ip, _ := ipLayer.(*layers.IPv4)
+
+		fmt.Printf("IP-адрес отправителя: %s\n"+"IP-адрес получателя: %s\n", ip.SrcIP, ip.DstIP)
+
+	}
+
 	// Получение уровня TCP из пакета
 	if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+
 		fmt.Println("Это TCP пакет")
 
 		// Получение TCP-данных из этого уровня
 		tcp, _ := tcpLayer.(*layers.TCP)
-		fmt.Printf("Из порта-отправителя %d в порт-получатель %d/n", tcp.SrcPort, tcp.DstPort)
+
+		fmt.Printf("Из порта-отправителя %d в порт-получатель %d\n", tcp.SrcPort, tcp.DstPort)
+
+	} else if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
+
+		fmt.Println("Это UDP пакет")
+
+		// Получение UDP-данных из этого уровня
+		udp, _ := udpLayer.(*layers.UDP)
+
+		fmt.Printf("Из порта-отправителя %d в порт-получатель %d\n", udp.SrcPort, udp.DstPort)
+
 	}
+
 	for _, layer := range packet.Layers() {
+
 		fmt.Println("Уровень пакета:", layer.LayerType())
+
 	}
 }
