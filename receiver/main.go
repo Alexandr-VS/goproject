@@ -29,7 +29,7 @@ func main() {
 
 func handlePacket(packet gopacket.Packet) {
 
-	//Получение уровня ip (источник, получатель)
+	//Получение уровня IP (источник, получатель)
 	if ipLayer := packet.Layer(layers.LayerTypeIPv4); ipLayer != nil {
 
 		ip, _ := ipLayer.(*layers.IPv4)
