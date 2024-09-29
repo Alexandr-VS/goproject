@@ -11,8 +11,8 @@ import (
 func main() {
 	if handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever); err != nil {
 		panic(err)
-		// } else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
-		// 	panic(err)
+	} else if err := handle.SetBPFFilter("host 127.0.0.1"); err != nil {
+		panic(err)
 	} else {
 
 		// Источник пакетов
