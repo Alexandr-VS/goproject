@@ -58,10 +58,5 @@ func handlePacket(packet gopacket.Packet) {
 		fmt.Printf("Из порта-отправителя %d в порт-получатель %d\n", udp.SrcPort, udp.DstPort)
 
 	}
-
-	for _, layer := range packet.Layers() {
-
-		fmt.Println("Уровень пакета:", layer.LayerType())
-
-	}
+	fmt.Println("Полезная нагрузка", packet.ApplicationLayer().Payload())
 }
