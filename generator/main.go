@@ -1,7 +1,8 @@
 package main
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"log"
 	"net"
 	"time"
 
@@ -19,62 +20,65 @@ func main() {
 
 	defer handle.Close()
 
-	for {
-		buf := gopacket.NewSerializeBuffer()
-		options := gopacket.SerializeOptions{
-			ComputeChecksums: true,
-			FixLengths:       true,
-		}
+	buf := gopacket.NewSerializeBuffer()
+	options := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
 
-		eth := layers.Ethernet{
-			EthernetType: layers.EthernetTypeIPv4,
-			SrcMAC:       net.HardwareAddr{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			DstMAC:       net.HardwareAddr{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		}
+	eth := layers.Ethernet{
+		EthernetType: layers.EthernetTypeIPv4,
+		SrcMAC:       net.HardwareAddr{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		DstMAC:       net.HardwareAddr{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+	}
 
-		ip := layers.IPv4{
-			Version:  4,
-			TTL:      64,
-			SrcIP:    net.IP{127, 0, 0, 1},
-			DstIP:    net.IP{127, 0, 0, 1},
-			Protocol: layers.IPProtocolUDP,
-		}
+	ip := layers.IPv4{
+		Version:  4,
+		TTL:      64,
+		SrcIP:    net.IP{127, 0, 0, 1},
+		DstIP:    net.IP{127, 0, 0, 1},
+		Protocol: layers.IPProtocolUDP,
+	}
 
-		udp := layers.UDP{
-			SrcPort: 62003,
-			DstPort: 8080,
-		}
+	udp := layers.UDP{
+		SrcPort: 62003,
+		DstPort: 8080,
+	}
 
-		udp.SetNetworkLayerForChecksum(&ip)
+	udp.SetNetworkLayerForChecksum(&ip)
+	payloadSize := 1000
+	payload := make([]byte, payloadSize)
+	rand.Read(payload)
 
-		n := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(256)
+	err = gopacket.SerializeLayers(buf, options,
+		&eth,
+		&ip,
+		&udp,
+		gopacket.Payload(payload),
+	)
 
-		payload := make([]byte, n)
+	if err != nil {
+		panic(err)
+	}
 
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	desiredBandwidth := 1_000_000_000_000 //10 Мбит/с
 
-		for i := range payload {
-			payload[i] = byte(r.Intn(256))
-		}
+	packetSizeInBits := payloadSize * 8
 
-		err := gopacket.SerializeLayers(buf, options,
-			&eth,
-			&ip,
-			&udp,
-			gopacket.Payload(payload),
-		)
+	packetsPerSecond := desiredBandwidth / packetSizeInBits
 
-		if err != nil {
-			panic(err)
-		}
+	interval := time.Second / time.Duration(packetsPerSecond)
 
-		packetData := buf.Bytes()
+	ticker := time.NewTicker(interval)
 
+	defer ticker.Stop()
+
+	packetData := buf.Bytes()
+
+	for range ticker.C {
 		err = handle.WritePacketData(packetData)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
-
-		time.Sleep(time.Millisecond * time.Duration(r.Intn(1000)))
 	}
 }
