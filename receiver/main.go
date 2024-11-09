@@ -11,9 +11,9 @@ import (
 func main() {
 	if handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever); err != nil {
 		panic(err)
-	} else if err := handle.SetBPFFilter("host 127.0.0.1"); err != nil {
+	} else /*if err := handle.SetBPFFilter("host 127.0.0.1"); err != nil {
 		panic(err)
-	} else {
+	} else */{
 
 		// Источник пакетов
 		packetSource := gopacket.NewPacketSource(handle, layers.LinkTypeEthernet)
@@ -58,5 +58,7 @@ func handlePacket(packet gopacket.Packet) {
 		fmt.Printf("Из порта-отправителя %d в порт-получатель %d\n", udp.SrcPort, udp.DstPort)
 
 	}
-	fmt.Println("Полезная нагрузка", packet.ApplicationLayer().Payload())
+	if packet.ApplicationLayer() != nil {
+		fmt.Println("Полезная нагрузка", packet.ApplicationLayer().Payload())
+	}
 }
